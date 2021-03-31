@@ -1,0 +1,23 @@
+<html>
+<head>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <button type="button" class="block" id="hiBtn">Say Hi to your server</button>
+    <!-- You only need to include the client file here -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js" integrity="sha384-DkkWv9oJFWLIydBXXjkBWnG1/fuVhw8YPBq37uvvD6WSYRFRqr21eY5Dg9ZhmWdy" crossorigin="anonymous"></script>
+</script>
+    <script>
+        const serverLocation = window.location.origin // or whatever your server location is
+        const socket = io(serverLocation);
+
+        window.onload = function () {
+            document.getElementById("hiBtn").addEventListener("click", function () {
+                socket.emit("hello", "Hi there, this is the client speaking");
+            })
+        }
+    </script>
+</body>
+
+</html>
