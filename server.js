@@ -8,7 +8,7 @@ const constants = require('./constants');
 const request = require('request');
 const utils = require('./utils')
 var format = require('date-format');
-
+var websocket = null;
 var tripStatus;
 //0 = trip is not initialised yet by driver, 
 //1= trip started but base reading yet to be taken by next reading from readerB
@@ -31,6 +31,7 @@ app.post('/start_trip', function (req, res) {
 
   if (tripStatus == 0) {
     setTripStatus(1);
+    missingCansList = [];
     console.log("Trip Started");
     res.send('Trip started successfully')
 
@@ -72,6 +73,10 @@ app.post('/stop_trip', function (req, res) {
         jerrycansList.push({ "rfId": jerrycan.rfId, "isEmptied": jerrycan.isEmptied })
       })
 
+      //Temporary Bugfix
+      if(currentCansList == null){
+        currentCansList = [];
+      }
       const data = {
         "finishDate": format.asString(),
         "jerrycansQuantityAtFinish": currentCansList.length,
@@ -79,17 +84,21 @@ app.post('/stop_trip', function (req, res) {
         "totalEmptiedJerrycans": emptiedJerryCans,
         "totalFilledJerrycansLeft": filledJerryCans,
         "jerrycans": jerrycansList
-      }
-
+      };
       //Updating trip final data to server
-      const url = constants.baseUrl + "trips/" + tripId;
-      request.put(url, { form: data }, (err, httpResponse, body) => {
+      const stopTripUrl = constants.baseUrl + "trips/" + tripId;
+
+      request({
+        method: "PUT",
+        uri: stopTripUrl,
+        json: data
+      }, function (err, response, body) {
         setTripStatus(0);
         console.log("Trip Stopped")
-      })
+      });
 
     })
-    res.send("Trip stopped successfully 1")
+    res.send("Trip stopped successfully")
 
   } else {
     res.send("No trip is running that can be stoppped.")
@@ -105,7 +114,7 @@ app.get('/get_trip_status', function (req, res) {
 
 io.on('connection', socket => {
   console.log("Client Connected")
-
+  websocket = socket;
   //Reader A used to empty a perrycan with specific rfId
   socket.on("readerA", data => {
     if (tripStatus == 0) {
@@ -133,6 +142,7 @@ io.on('connection', socket => {
     }
     const buf = Buffer.from(data.replace(/\s/g, ""), "hex");
     const serial = new Uint32Array(buf);
+    console.log(serial);
     if (serial[0] === 10 &&
       serial[1] === 13) {
 
@@ -180,22 +190,28 @@ io.on('connection', socket => {
 });
 
 function updateBaseCansOnServer() {
-  const url = constants.baseUrl + "trips/" + tripId;
+  const updateTripUrl = constants.baseUrl + "trips/" + tripId;
   const jerrycansList = [];
   currentCansList.forEach(rfId => {
-    jerrycansList.push({ "rfId": rfId, "isEmptied": false })
+    jerrycansList.push({ "rfId": `${rfId}`, "isEmptied": false })
   })
   const data = {
     "jerrycans": jerrycansList,
     "jerrycansQuantity": jerrycansList.length
   }
-  request.put(url, { form: data }, (error, response) => {
-    if (error) {
-      console.log(error);
+  console.log("JerryCan length is ", jerrycansList.length);
+ 
+  request({
+    method: "PUT",
+    uri: updateTripUrl,
+    json: data
+  }, function (err, response, body) {
+    if (err) {
+      console.log(err);
     } else {
       console.log("Base perrycans syncronised with server");
     }
-  })
+  });
 
   const logUrl = constants.baseUrl + "logs";
   const logData = {
@@ -304,7 +320,10 @@ function reportMissing(rfId) {
       missingCansList.forEach((perrycan, index) => {
         if (perrycan.id == rfId) {
           perrycan.isLost = true;
-          console.log(missingCansList);
+          // if(websocket != null){
+          //   console.log("Reporting missing to customer")
+          // // websocket.emit("missingPerrycan" , perrycan);
+          // }
         }
       })
     }

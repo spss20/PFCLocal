@@ -1,3 +1,4 @@
+
 const delay = 7; //(in Seconds) Tells the delay between rf missing and rf found which can be left unnoticed otherwise will report as missing
 const gpsFrequency = 10; //(in Seconds) Tells how often system will update gps location to ril server
 const stockFrequency = 10; //(in Seconds) Tells how often stock will be pushed to relience server.
