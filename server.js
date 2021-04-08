@@ -32,6 +32,7 @@ app.post('/start_trip', function (req, res) {
   if (tripStatus == 0) {
     setTripStatus(1);
     missingCansList = [];
+    currentCansList = [];
     console.log("Trip Started");
     res.send('Trip started successfully')
 
@@ -115,6 +116,7 @@ app.get('/get_trip_status', function (req, res) {
 io.on('connection', socket => {
   console.log("Client Connected")
   websocket = socket;
+
   //Reader A used to empty a perrycan with specific rfId
   socket.on("readerA", data => {
     if (tripStatus == 0) {
@@ -130,7 +132,7 @@ io.on('connection', socket => {
 
       const query = `UPDATE cans SET isEmptied = 1 WHERE rfId = '${rfId}'`
       db.query(query, function (err, result) {
-        if (err) throw err;
+        if (err) return;
         console.log(`Can with rfId ${rfId} emptied successfully`)
       })
     }
@@ -142,7 +144,6 @@ io.on('connection', socket => {
     }
     const buf = Buffer.from(data.replace(/\s/g, ""), "hex");
     const serial = new Uint32Array(buf);
-    console.log(serial);
     if (serial[0] === 10 &&
       serial[1] === 13) {
 
@@ -164,11 +165,11 @@ io.on('connection', socket => {
         // Check if any cans already exist in data, if exist , delete all of them
         const getAllCans = "SELECT * FROM cans;"
         db.query(getAllCans, (err, result) => {
-          if (err) throw err;
+          if (err) return;
           if (result.length != 0) {
             const deleteAllCans = "truncate cans"
             db.query(deleteAllCans, (err, result) => {
-              if (err) throw err;
+              if (err) return;
               insertCansIntoDatabase();
             });
           } else {
@@ -186,6 +187,10 @@ io.on('connection', socket => {
     }
   })
 
+  socket.on("locationUpdate" , data => {
+    console.log(data);
+  })
+  
   socket.on('disconnect', () => { console.log("Client Disconnected") });
 });
 
@@ -226,7 +231,7 @@ function compareCansQuantity() {
   // Check if any cans already exist in data, if exist , delete all of them
   const deleteAllCans = "truncate tempcans"
   db.query(deleteAllCans, (err1, r1) => {
-    if (err1) throw err1;
+    if (err1) return1;
 
     const insertCans = "INSERT INTO tempcans (rfId) VALUES ?";
     const tempArray = []
@@ -234,7 +239,7 @@ function compareCansQuantity() {
       tempArray.push([rf])
     })
     db.query(insertCans, [tempArray], function (err2, dumpResult) {
-      if (err2) throw err2;
+      if (err2) return2;
       console.log("Current fetched cans is: ", dumpResult.affectedRows);
 
       //Compare between cans table and tempcans table
@@ -275,14 +280,15 @@ function compareCansQuantity() {
           const query = `SELECT * FROM tempcans WHERE rfId = '${perrycan.id}'`
           db.query(query, function (err, result) {
             if (result.length != 0) {
-              console.log(`Found the ${perrycan.id} can after being lost.`)
               missingCansList.splice(index, 1)
 
               //Logging  to server
+              const timeDiff = utils.timeDifference(new Date().getTime() , perrycan.time);
+              console.log(`Found the ${perrycan.id} can after ${timeDiff} of missing.`)
               const logUrl = constants.baseUrl + "logs";
               const logData = {
                 "trip": [tripId],
-                "message": `✅RfId ${perrycan.id} found after missing`
+                "message": `✅RfId ${perrycan.id} found after ${timeDiff} of missing`
               }
               request.post(logUrl, { form: logData });
             }
@@ -299,7 +305,7 @@ function compareCansQuantity() {
 function reportMissing(rfId) {
   const query = `SELECT * FROM tempcans WHERE rfId = '${rfId}'`
   db.query(query, (err, result) => {
-    if (err) throw err;
+    if (err) return;
     if (result.length != 0) {
       console.log("Found the missing perrycan ", rfId, " before delay.")
       missingCansList.forEach((perrycan, index) => {

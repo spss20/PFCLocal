@@ -1,13 +1,51 @@
-const fs = require('fs')
+const destinationLocation = {"lat" : "28.485275" , "lon" : "77.019353"}
 
-const body = {"id":14,"startDate":"2021-03-31T15:55:37.330Z","finishDate":null,"jerrycansQuantity":null,"jerrycansQuantityAtFinish":null,"missingJerrycans":null,"totalEmptiedJerrycans":null,"totalLoadedJerrycansLeft":null,"truckId":null,"driver":{"id":1,"username":"suryapss","email":"sppro.20@gmail.com","provider":"local","confirmed":true,"blocked":false,"role":1,"trip":14,"created_at":"2021-03-31T14:03:24.302Z","updated_at":"2021-03-31T15:55:37.383Z"},"published_at":"2021-03-31T15:55:37.353Z","created_at":"2021-03-31T15:55:37.359Z","updated_at":"2021-03-31T15:55:37.401Z","jerrycans":[],"logs":[]}
+const currentLocation = {"lat" : "28.484794" , "lon" : "77.020066"}
 
-console.log("Id: " , body.id);
-function setTripId(trip_id){
-    const rawFile = fs.readFileSync("configurations");
-    const data = JSON.parse(rawFile);
-    data.trip_id = trip_id;
-  
-    fs.writeFileSync("configurations", JSON.stringify(data))
-    tripId = trip_id;
-  }
+let spotCoordinates1 = [28.484794, 77.020066];
+let spotCoordinates2 = [28.4855622, 77.0192079]
+
+let center = {lat: 28.485275, lng: 77.019353};
+let radius = 0.1
+
+checkIfInside(spotCoordinates1);
+checkIfInside(spotCoordinates2);
+
+function checkIfInside(spotCoordinates) {
+
+    let newRadius = distanceInKmBetweenEarthCoordinates(spotCoordinates[0], spotCoordinates[1], center.lat, center.lng);
+    console.log(newRadius)
+
+    if( newRadius < radius ) {
+        //point is inside the circle
+        console.log('inside')
+    }
+    else if(newRadius > radius) {
+        //point is outside the circle
+        console.log('outside')
+    }
+    else {
+        //point is on the circle
+        console.log('on the circle')
+    }
+
+}
+
+function distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) {
+  var earthRadiusKm = 6371;
+
+  var dLat = degreesToRadians(lat2-lat1);
+  var dLon = degreesToRadians(lon2-lon1);
+
+  lat1 = degreesToRadians(lat1);
+  lat2 = degreesToRadians(lat2);
+
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return earthRadiusKm * c;
+}
+
+function degreesToRadians(degrees) {
+  return degrees * Math.PI / 180;
+}
