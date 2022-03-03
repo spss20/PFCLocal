@@ -3,10 +3,10 @@ const app = express()
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 var path = require('path');
+const port = 3000;
 
-
-server.listen(3000, function () {
-  console.log("Server listening on port 3000")
+server.listen(port, function () {
+  console.log("Server listening on port " , port)
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -22,7 +22,7 @@ io.on('connection', socket => {
   //Read dispenser serial data
   socket.on("dispenser" , data => {
     socket.broadcast.emit("dispenser" , data);
-    console.log(data);
+    console.log("Dispenser" , data);
   })
 
 
