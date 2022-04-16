@@ -1,7 +1,15 @@
 const express = require('express');
+var cors = require('cors');
 const app = express()
+const corsConfig = {
+    origin: "*",
+    credentials: true
+  };
+app.use(cors(corsConfig));
+
 const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const io = require('socket.io')(server , { cors: corsConfig });
+
 var path = require('path');
 const port = 3000;
 
