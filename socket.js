@@ -1,4 +1,5 @@
 const express = require('express');
+var fs = require('fs');
 var cors = require('cors');
 const app = express()
 const corsConfig = {
@@ -7,7 +8,14 @@ const corsConfig = {
   };
 app.use(cors(corsConfig));
 
-const server = require('http').createServer(app);
+const server = require('https').createServer({
+  key: fs.readFileSync('./ssl.key'),
+  cert: fs.readFileSync('./cert.crt'),
+  ca: fs.readFileSync('./certificate_auth.crt'),
+  requestCert: false,
+  rejectUnauthorized: false
+}, app);
+
 const io = require('socket.io')(server , { cors: corsConfig });
 
 var path = require('path');
