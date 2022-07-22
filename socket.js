@@ -40,6 +40,16 @@ io.on('connection', socket => {
     socket.broadcast.emit("dispenser" , data);
     console.log("Dispenser" , data);
   })
+  
+    socket.on("sensor" , data => {
+    socket.broadcast.emit("sensor" , data);
+    console.log("Sensor" , data);
+  })
+
+  socket.on("mqtt" , data => {
+    socket.broadcast.emit("mqtt" , data);
+    console.log("MQTT" , data);
+  })
 
 
   socket.on("nozzleReader" , data => {
